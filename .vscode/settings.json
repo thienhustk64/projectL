@@ -3,6 +3,7 @@
     "diffEditor.codeLens": true,
     "files.associations": {
         "stdio.h": "c",
-        "sdl.h": "c"
+        "sdl.h": "c",
+        "sdl_test_images.h": "c"
     }
 }
