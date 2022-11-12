@@ -1,8 +1,9 @@
 #include<stdio.h>
 #include<SDL2/SDL.h>
-#include<SDL2/SDL_test_images.h>
+#include<SDL2/SDL_image.h>
+#include<time.h>
 
-const int WIDTH = 800, HEIGHT = 600;
+const int WIDTH = 800, HEIGHT = 600, FPS = 30;
 
 typedef struct{
     int x, y;
@@ -10,24 +11,50 @@ typedef struct{
     char *name;
 }Man;
 
+
 typedef struct{
     Man man;
-    SDL_Texture *star;
+    SDL_Rect imgSize[6];
+    SDL_Texture *map;
+    SDL_Texture *character;
     SDL_Renderer *renderer;
 }GameState;
 
 void loadGame( GameState *game){
-    SDL_Surface *starSurface = NULL;
+    int i;
+    SDL_Surface *surface = NULL;
+
     // Load image
-    starSurface = SDL_LoadBMP("anime-naruto.bmp");
-    if( starSurface == NULL){
+    surface = IMG_Load("map/Background.png");
+    game->map = SDL_CreateTextureFromSurface( game->renderer, surface);
+    SDL_FreeSurface( surface);
+
+    surface = IMG_Load( "character/Biker/Walk1.png");
+    game->character = SDL_CreateTextureFromSurface( game->renderer, surface);
+    SDL_FreeSurface( surface);
+    game->man.x = 320-40;
+    game->man.y = 240-40;
+    for( i = 0; i < 6; i++){
+        game->imgSize[i].x = 48*i;
+        game->imgSize[i].y = 0;
+        game->imgSize[i].w = 48;
+        game->imgSize[i].h = 48;
+    }
+}
+
+void loadBackground( SDL_Window *window){
+    SDL_Surface *screen;
+    SDL_Surface *background;
+    screen = SDL_GetWindowSurface( window);
+    background = IMG_Load("map/Background.png");
+    if( background == NULL){
         printf("Cant find image\n");
         SDL_Quit();
         exit(1);
     }
-
-    game->star = SDL_CreateTextureFromSurface( game->renderer, starSurface);
-    SDL_FreeSurface( starSurface);
+    SDL_BlitSurface( background, NULL, screen, NULL);
+    SDL_FreeSurface( background);
+    SDL_UpdateWindowSurface( window);
 }
 
 int processEvents(SDL_Window *window, GameState *game){
@@ -78,37 +105,41 @@ int processEvents(SDL_Window *window, GameState *game){
     return done;
 }
 
-void doRender( GameState *game){
-    SDL_SetRenderDrawColor(game->renderer, 0, 0, 255, 255);
+void doRender( GameState *game, int *frame){
     // clear the screen
     SDL_RenderClear(game->renderer);
-    SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-    SDL_Rect rect = { game->man.x, game->man.y, 80, 80};
-    SDL_RenderFillRect( game->renderer, &rect);
 
-    // draw image
-    SDL_Rect imgRect = { 50, 50, 64, 64};
-    SDL_RenderCopy( game->renderer, game->star, NULL, &imgRect);
+    // draw map
+    SDL_Rect mapRect = { 0, 0, WIDTH, HEIGHT};
+    SDL_RenderCopy( game->renderer, game->map, NULL, &mapRect);
 
+    SDL_Rect characterRect = { game->man.x, game->man.y, 48, 48};
+    if( *frame >= 6){
+        *frame = 0;
+    }
+    SDL_RenderCopyEx( game->renderer, game->character, &game->imgSize[*frame], &characterRect, 0, NULL, 0);
+    *frame = *frame + 1;
     // show after you drawing
     SDL_RenderPresent(game->renderer);
-    
 }
 
+void destroy( SDL_Window *window, SDL_Renderer *renderer, GameState *game){
+    SDL_DestroyTexture( game->character);
+    SDL_DestroyTexture( game->map);
+    SDL_DestroyWindow( window);
+    SDL_DestroyRenderer( renderer);
+}
 
 int main(int argc, char *argv[]) {
 
     GameState gameState;
-    gameState.man.x = 320-40;
-    gameState.man.y = 240-40;
-
-    SDL_Init(SDL_INIT_EVERYTHING);
     SDL_Renderer *renderer;
     SDL_Window *window;
+    Uint32 start;
 
+    SDL_Init(SDL_INIT_EVERYTHING);
     window = SDL_CreateWindow("SDL2 Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_ALLOW_HIGHDPI);
     renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-
     gameState.renderer = renderer;
 
     if( NULL == window){
@@ -118,17 +149,19 @@ int main(int argc, char *argv[]) {
 
     loadGame( &gameState);
     int done = 0;
-    while( !done) { 
+    int frame = 0;
+    while( !done) {
+        start = SDL_GetTicks();
         done = processEvents( window, &gameState);
-        doRender( &gameState);
+        doRender( &gameState, &frame);
         // Tránh CPU xử lý nhiều
-        SDL_Delay(10);
+        if(1000/FPS > SDL_GetTicks()-start) {
+            SDL_Delay(1000/FPS-(SDL_GetTicks()-start));
+        }
     }
 
     // Wait a few second before quitting
-    SDL_DestroyTexture( gameState.star);
-    SDL_DestroyWindow( window);
-    SDL_DestroyRenderer( renderer);
+    destroy( window, renderer, &gameState);
     SDL_Quit();
     return EXIT_SUCCESS;
 }
