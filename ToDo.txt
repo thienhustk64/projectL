@@ -1,0 +1,12 @@
+1. Gameplay:
+    - Animation: 
+        + Mới làm được walk
+        + Hiện cần làm idle
+        + Khi đi thì mới walk ( Nhận dấu trái phải)
+    - Skill:
+    - Collision:
+2. Map:
+    - Build map, create collision detection
+3. Socker:
+    - Nên truyền đạt những gì ( position, time, life, skill)
+    - 

@@ -4,6 +4,8 @@
     "files.associations": {
         "stdio.h": "c",
         "sdl.h": "c",
-        "sdl_test_images.h": "c"
+        "sdl_test_images.h": "c",
+        "sdl_render.h": "c",
+        "sdl_image.h": "c"
     }
 }
