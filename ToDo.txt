@@ -19,6 +19,6 @@
     - https://github.com/JesseSoldat/angProject/blob/master/app/img/narutoBleach.png
 
 6. Deadline: - Đến thứ 6 ngày 18
-    - Thành: Socket
-    - Triệu: Menu
+    - Thành: Socket - Kết nối P2P - Chạy được client sv cùng 1 máy
+    - Triệu: Menu - Đang gặp vấn đề
     - Quân: tool làm animation
