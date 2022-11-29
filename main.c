@@ -1,29 +1,23 @@
-#include<stdio.h>
+#include <stdio.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
-#include<time.h>
+#include <time.h>
+#include "player.c"
+#include "collision.c"
+
+typedef struct{
+    Man man;
+    Ledge mapCollision;
+    SDL_Texture *map;
+    SDL_Renderer *renderer;
+}GameState;
 
 const int WIDTH = 800, HEIGHT = 600, FPS = 20;
 SDL_Renderer *renderer;
 SDL_Window *window;
-
-typedef struct{
-    int x, y;
-    short life;
-    char *name;
-    short action;
-    SDL_Texture *walk;
-    SDL_Rect walkStatus[6];
-}Man;
-
-typedef struct{
-    Man man;
-    SDL_Texture *map;
-    SDL_Renderer *renderer;
-}GameState;
 
 void initGame(){
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -51,29 +45,40 @@ void initGame(){
 }
 
 void loadGame( GameState *game){
-    int i;
     SDL_Surface *surface = NULL;
 
     // Load image
-    surface = IMG_Load("map/Background.png");
+    surface = IMG_Load("data/background.png");
     game->map = SDL_CreateTextureFromSurface( game->renderer, surface);
     SDL_FreeSurface( surface);
 
-    surface = IMG_Load( "character/ichigo2(60x90).png");
-    game->man.walk = SDL_CreateTextureFromSurface( game->renderer, surface);
-    SDL_FreeSurface( surface);
+    //Load man
+    game->man = initMan( game->renderer);
 
-    game->man.action = 0;
-    game->man.x = 320-40;
-    game->man.y = 240-40;
+    game->mapCollision.x = 0;
+    game->mapCollision.y = 0;
+    game->mapCollision.h = 500;
+    game->mapCollision.w = 800;
+}
 
-    // Detect animation
-    for( i = 0; i < 4; i++){
-        game->man.walkStatus[i].x = 90*i;
-        game->man.walkStatus[i].y = 0;
-        game->man.walkStatus[i].w = 90;
-        game->man.walkStatus[i].h = 60;
+void collisionDetect(GameState *game){
+    float mw = 128, mh = 128;
+    float mx = game->man.x, my = game->man.y;
+    float bx = game->mapCollision.x, by = game->mapCollision.y, bw = game->mapCollision.w, bh = game->mapCollision.h;
+
+    if( mx < bx){
+        game->man.x = bx;
     }
+    if( mx + mw > bx + bw){
+        game->man.x = bw - mw;
+    }
+    if( my < by){
+        game->man.y = by;
+    }
+    if( my + mh > by + bh){
+        game->man.y = bh - mh;
+    }
+
 }
 
 int processEvents(GameState *game){
@@ -116,13 +121,17 @@ int processEvents(GameState *game){
         game->man.action = 1;
     }
     if( state[ SDL_SCANCODE_UP]){
-        game->man.y -= 10;
+        game->man.y -= 20;
     }
-    if( state[ SDL_SCANCODE_DOWN]){
-        game->man.y += 10;
-    }
+    // if( state[ SDL_SCANCODE_DOWN]){
+    //     game->man.y += 10;
+    // }
 
     return done;
+}
+
+void processGame( GameState *game){
+    game->man.y += game->man.dy;
 }
 
 void doRender( GameState *game, int *frame){
@@ -134,15 +143,12 @@ void doRender( GameState *game, int *frame){
     SDL_RenderCopy( game->renderer, game->map, NULL, &mapRect);
 
     // Load animation
-    SDL_Rect walkRect = { game->man.x, game->man.y, 64, 64};
-    if( *frame >= 4){
+    SDL_Rect walkRect = { game->man.x, game->man.y, 64, 128};
+    if( *frame >= 6){
         *frame = 0;
     }
-    if( game->man.action == 0){
-        SDL_RenderCopyEx( game->renderer, game->man.walk, &game->man.walkStatus[*frame], &walkRect, 0, NULL, SDL_FLIP_NONE);
-    }else if( game->man.action == 1){
-        SDL_RenderCopyEx( game->renderer, game->man.walk, &game->man.walkStatus[*frame], &walkRect, 0, NULL, SDL_FLIP_HORIZONTAL);
-    }
+    SDL_RenderCopyEx( game->renderer, game->man.idle[*frame], NULL, &walkRect, 0, NULL, SDL_FLIP_NONE);
+    // SDL_RenderCopyEx( game->renderer, game->man.idle[*frame], NULL, &walkRect, 0, NULL, SDL_FLIP_HORIZONTAL);
     *frame = *frame + 1;
 
     // show after you drawing
@@ -150,7 +156,12 @@ void doRender( GameState *game, int *frame){
 }
 
 void destroy(GameState *game){
-    SDL_DestroyTexture( game->man.walk);
+    SDL_DestroyTexture( game->man.idle[0]);
+    SDL_DestroyTexture( game->man.idle[1]);
+    SDL_DestroyTexture( game->man.idle[2]);
+    SDL_DestroyTexture( game->man.idle[3]);
+    SDL_DestroyTexture( game->man.idle[4]);
+    SDL_DestroyTexture( game->man.idle[5]);
     SDL_DestroyTexture( game->map);
     SDL_DestroyWindow( window);
     SDL_DestroyRenderer( renderer);
@@ -169,13 +180,15 @@ int main(int argc, char *argv[]) {
     while( !done) {
         start = SDL_GetTicks();
         done = processEvents( &gameState);
+        processGame( &gameState);
+        collisionDetect( &gameState);
         doRender( &gameState, &frame);
         // Tránh CPU xử lý nhiều
         if(1000/FPS > SDL_GetTicks()-start) {
             SDL_Delay(1000/FPS-(SDL_GetTicks()-start));
         }
     }
-
+    
     // Wait a few second before quitting
     destroy( &gameState);
     SDL_Quit();
