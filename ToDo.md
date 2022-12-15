@@ -18,9 +18,9 @@
     - https://github.com/QIN2DIM/2D-object-detection-Bleach-vs-Naruto
     - https://github.com/JesseSoldat/angProject/blob/master/app/img/narutoBleach.png
 
-6. Deadline: - Đến thứ 3 ngày 29 - 11
-    - Quân + Thành: báo cáo về thiết kế giao thức
-    - Triệu: use-case (ngày 27 - 11 thì càng tốt)
+6. Deadline: - 
+    - Quân + Thành: Code socket server
+    - Triệu: làm menu, tìm cách đọc file .xml
 
 ## Báo cáo
 - Phân chia công việc giữa các thành viên (vai trò và nhiệm vụ của mỗi thành viên)

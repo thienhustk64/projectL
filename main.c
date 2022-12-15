@@ -10,12 +10,15 @@
 
 typedef struct{
     Man man;
+    Man man2;
     Ledge mapCollision;
     SDL_Texture *map;
     SDL_Renderer *renderer;
+    int frame;
+    int isCombo;
 }GameState;
 
-const int WIDTH = 800, HEIGHT = 600, FPS = 20;
+const int WIDTH = 800, HEIGHT = 600, FPS = 15;
 SDL_Renderer *renderer;
 SDL_Window *window;
 
@@ -54,7 +57,10 @@ void loadGame( GameState *game){
 
     //Load man
     game->man = initMan( game->renderer);
+    game->man2 = initMan( game->renderer);
 
+    game->frame = 0;
+    game->isCombo = 0;
     game->mapCollision.x = 0;
     game->mapCollision.y = 0;
     game->mapCollision.h = 500;
@@ -114,14 +120,20 @@ int processEvents(GameState *game){
     const Uint8 *state = SDL_GetKeyboardState(NULL);
     if( state[ SDL_SCANCODE_RIGHT]){
         game->man.x += 10;
-        game->man.action = 0;
     }
     if( state[ SDL_SCANCODE_LEFT]){
         game->man.x -= 10;
-        game->man.action = 1;
     }
     if( state[ SDL_SCANCODE_UP]){
         game->man.y -= 20;
+    }
+    if( state[ SDL_SCANCODE_J]){
+        if( game->man.action == 1){
+            game->isCombo = 1;
+        }
+        if( game->man.action == 0){
+            game->man.action = 1;
+        }
     }
     // if( state[ SDL_SCANCODE_DOWN]){
     //     game->man.y += 10;
@@ -134,7 +146,7 @@ void processGame( GameState *game){
     game->man.y += game->man.dy;
 }
 
-void doRender( GameState *game, int *frame){
+void doRender( GameState *game){
     // clear the screen
     SDL_RenderClear(game->renderer);
 
@@ -143,28 +155,29 @@ void doRender( GameState *game, int *frame){
     SDL_RenderCopy( game->renderer, game->map, NULL, &mapRect);
 
     // Load animation
-    SDL_Rect walkRect = { game->man.x, game->man.y, 64, 128};
-    if( *frame >= 6){
-        *frame = 0;
+    SDL_Rect walkRect = { game->man.x, game->man.y, game->man.animation.size[game->man.action].w, game->man.animation.size[game->man.action].h};
+    if( game->frame >= game->man.animation.len[ game->man.action]){
+        game->frame = 0;
+        if( game->isCombo == 1){
+            game->man.action = 2;
+            game->isCombo = 0;
+        }else{
+            game->man.action = 0;
+        }
     }
-    SDL_RenderCopyEx( game->renderer, game->man.idle[*frame], NULL, &walkRect, 0, NULL, SDL_FLIP_NONE);
-    // SDL_RenderCopyEx( game->renderer, game->man.idle[*frame], NULL, &walkRect, 0, NULL, SDL_FLIP_HORIZONTAL);
-    *frame = *frame + 1;
+    SDL_RenderCopyEx( game->renderer, game->man.animation.animations[game->man.action][game->frame], NULL, &walkRect, 0, NULL, SDL_FLIP_NONE);
+    // SDL_RenderCopyEx( game->renderer, game->man.animation.animations[game->man.action][game->frame], NULL, &walkRect, 0, NULL, SDL_FLIP_HORIZONTAL);
+    game->frame = game->frame + 1;
 
     // show after you drawing
     SDL_RenderPresent(game->renderer);
 }
 
 void destroy(GameState *game){
-    SDL_DestroyTexture( game->man.idle[0]);
-    SDL_DestroyTexture( game->man.idle[1]);
-    SDL_DestroyTexture( game->man.idle[2]);
-    SDL_DestroyTexture( game->man.idle[3]);
-    SDL_DestroyTexture( game->man.idle[4]);
-    SDL_DestroyTexture( game->man.idle[5]);
     SDL_DestroyTexture( game->map);
     SDL_DestroyWindow( window);
     SDL_DestroyRenderer( renderer);
+    //destroy animation texture
 }
 
 int main(int argc, char *argv[]) {
@@ -176,13 +189,12 @@ int main(int argc, char *argv[]) {
 
     loadGame( &gameState);
     int done = 0;
-    int frame = 0;
     while( !done) {
         start = SDL_GetTicks();
         done = processEvents( &gameState);
         processGame( &gameState);
         collisionDetect( &gameState);
-        doRender( &gameState, &frame);
+        doRender( &gameState);
         // Tránh CPU xử lý nhiều
         if(1000/FPS > SDL_GetTicks()-start) {
             SDL_Delay(1000/FPS-(SDL_GetTicks()-start));
